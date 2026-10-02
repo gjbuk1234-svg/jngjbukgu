@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>청렴 신고 사건 검색·조회</title>
+<meta name="description" content="시민이 청렴 신고 사건을 신고유형과 처리상태로 빠르게 조회할 수 있는 정적 공개 페이지">
+<style>
+:root{--navy:#163a63;--blue:#1769aa;--bg:#f4f7fb;--card:#fff;--line:#e1e7ef;--muted:#64748b;--ink:#172033}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}
+header{background:linear-gradient(135deg,#12365e,#1e5b8f);color:white;padding:32px 20px}
+.wrap{max-width:1180px;margin:auto}h1{margin:0 0 8px;font-size:30px}header p{margin:0;color:#dbeafe}
+main{padding:22px 20px 48px}.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:18px;box-shadow:0 2px 8px #00000008}
+.filters{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end}label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+select,input,button{height:42px;border:1px solid #cbd5e1;border-radius:9px;padding:0 11px;font:inherit;background:white}button{cursor:pointer}.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.result{display:flex;justify-content:space-between;align-items:center;margin:6px 2px 14px}.count{font-size:20px;font-weight:800}.hint{color:var(--muted);font-size:13px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px}.card h2{font-size:16px;margin:0 0 14px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:9px}.meta div{background:#f8fafc;border-radius:9px;padding:9px}.meta small{display:block;color:var(--muted);font-size:11px;margin-bottom:3px}.meta strong{font-size:13px}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eaf2ff;color:#145a92;font-size:12px}
+.rss-list{list-style:none;padding:0;margin:0}.rss-list li{padding:11px 0;border-bottom:1px solid var(--line)}.rss-list li:last-child{border-bottom:0}.rss-list a{color:var(--ink);text-decoration:none;font-weight:700}.rss-list a:hover{text-decoration:underline}.rss-date{color:var(--muted);font-size:12px;margin-left:7px}
+.empty{text-align:center;color:var(--muted);padding:42px}.source{font-size:13px;color:var(--muted);margin-top:10px}
+@media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.filters{grid-template-columns:1fr}.cards{grid-template-columns:1fr}h1{font-size:25px}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<h1>청렴 신고 사건 검색·조회</h1>
+<p>공개 가능한 사건 정보를 신고유형과 처리상태로 빠르게 확인하세요.</p>
+</div></header>
+<main class="wrap">
+<section class="panel">
+  <div class="filters">
+    <div><label for="type">신고유형</label><select id="type"><option value="">전체 신고유형</option></select></div>
+    <div><label for="status">처리상태</label><select id="status"><option value="">전체 처리상태</option></select></div>
+    <div><label for="keyword">사건ID 검색</label><input id="keyword" placeholder="사건ID 입력"></div>
+    <button class="primary" id="reset">필터 초기화</button>
+  </div>
+</section>
+<section>
+  <div class="result"><span class="count" id="count">결과 0건</span><span class="hint">공개 사건 데이터 · 카드형 조회</span></div>
+  <div id="cards" class="cards"></div>
+</section>
+<section class="panel" style="margin-top:22px">
+  <h2 style="margin-top:0">행정안전부 최신 소식</h2>
+  <p class="source">
+    빌드 시점에 <strong>korea.kr RSS</strong>를 조회해 정적 목록으로 생성합니다.
+    <a href="https://www.korea.kr/rss/dept_mois.xml" target="_blank" rel="noopener">RSS 출처 링크</a>
+  </p>
+  <ul id="rss" class="rss-list"></ul>
+</section>
+</main>
+<script>
+let DATA=[];
+const $=id=>document.getElementById(id);
+const uniq=k=>[...new Set(DATA.map(x=>x[k]).filter(Boolean))].sort();
+function fill(id,key){uniq(key).forEach(v=>{let o=document.createElement("option");o.value=v;o.textContent=v;$(id).appendChild(o)})}
+function render(){
+ const t=$("type").value,s=$("status").value,q=$("keyword").value.trim().toLowerCase();
+ const rows=DATA.filter(x=>(!t||x["신고유형"]===t)&&(!s||x["처리상태"]===s)&&(!q||String(x["사건ID"]).toLowerCase().includes(q)));
+ $("count").textContent=`결과 ${rows.length.toLocaleString("ko-KR")}건`;
+ $("cards").innerHTML=rows.map(x=>`<article class="card">
+   <h2>${x["사건ID"]??"-"}</h2>
+   <div class="meta">
+    <div><small>신고일자</small><strong>${x["신고일자"]??"-"}</strong></div>
+    <div><small>신고유형</small><strong><span class="badge">${x["신고유형"]??"-"}</span></strong></div>
+    <div><small>지역</small><strong>${x["지역"]??"-"}</strong></div>
+    <div><small>처리상태</small><strong>${x["처리상태"]??"-"}</strong></div>
+   </div>
+ </article>`).join("")||`<div class="panel empty" style="grid-column:1/-1">조건에 맞는 사건이 없습니다.</div>`;
+}
+async function init(){
+ const r=await fetch("data/cases.json"); DATA=await r.json();
+ fill("type","신고유형");fill("status","처리상태");render();
+}
+["type","status","keyword"].forEach(id=>$(id).addEventListener("input",render));
+$("reset").onclick=()=>{ $("type").value="";$("status").value="";$("keyword").value="";render() };
+init().catch(e=>{$("cards").innerHTML='<div class="panel empty">데이터를 불러오지 못했습니다.</div>'});
+</script>
+<script>
+fetch("data/mois-rss.json").then(r=>r.json()).then(d=>{
+ const el=document.getElementById("rss");
+ el.innerHTML=d.items.slice(0,6).map(x=>`<li><a href="${x.url}" target="_blank" rel="noopener">${x.title}</a><span class="rss-date">${x.date||""}</span></li>`).join("");
+}).catch(()=>{});
+</script>
+</body></html>
